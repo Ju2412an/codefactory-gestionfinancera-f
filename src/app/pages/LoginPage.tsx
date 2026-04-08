@@ -21,7 +21,7 @@ export function LoginPage() {
     try {
       const usuario = await autenticar(email, password);
       guardarUsuarioLocal(usuario);
-      navigate('/calendario');
+      navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al iniciar sesión');
     } finally {

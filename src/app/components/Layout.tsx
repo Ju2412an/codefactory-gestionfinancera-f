@@ -1,13 +1,36 @@
-import { Outlet, NavLink } from "react-router";
-import { LayoutDashboard, Wallet, TrendingUp, TrendingDown } from "lucide-react";
+import { Outlet, NavLink, useNavigate } from "react-router";
+import { LayoutDashboard, Wallet, TrendingUp, TrendingDown, Users, LogOut } from "lucide-react";
+import { limpiarAutenticacion, obtenerUsuarioLocal } from "../services/apiService";
 
 export function Layout() {
+  const navigate = useNavigate();
+  const usuario = obtenerUsuarioLocal();
+
+  const handleLogout = () => {
+    limpiarAutenticacion();
+    navigate("/login");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <h1 className="text-2xl font-bold text-gray-900">Gestión de Finanzas</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Gestión Financiera</h1>
+            <div className="flex items-center gap-4">
+              {usuario && (
+                <span className="text-sm text-gray-600">
+                  {usuario.nombre} {usuario.apellido}
+                </span>
+              )}
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-600 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                Salir
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -28,6 +51,20 @@ export function Layout() {
             >
               <LayoutDashboard className="w-5 h-5" />
               <span>Panel</span>
+            </NavLink>
+
+            <NavLink
+              to="/users"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-4 border-b-2 transition-colors ${
+                  isActive
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+                }`
+              }
+            >
+              <Users className="w-5 h-5" />
+              <span>Usuarios</span>
             </NavLink>
 
             <NavLink

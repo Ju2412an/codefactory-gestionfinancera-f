@@ -178,6 +178,53 @@ export async function cancelarReserva(id: number): Promise<void> {
   }
 }
 
+// Servicio de Usuarios
+export async function registrarUsuario(email: string, nombre: string, apellido: string, password: string): Promise<Usuario> {
+  const response = await fetch(`${API_BASE_URL}/usuarios/registro`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, nombre, apellido, password }),
+  });
+
+  const data: ApiResponse<Usuario> = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.message || 'Error al registrar usuario');
+  }
+
+  return data.data as Usuario;
+}
+
+export async function listarUsuarios(): Promise<Usuario[]> {
+  const response = await fetch(`${API_BASE_URL}/usuarios`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  const data: ApiResponse<Usuario[]> = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.message || 'Error al listar usuarios');
+  }
+
+  return data.data as Usuario[];
+}
+
+export async function obtenerUsuario(id: number): Promise<Usuario> {
+  const response = await fetch(`${API_BASE_URL}/usuarios/${id}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  const data: ApiResponse<Usuario> = await response.json();
+
+  if (!data.success) {
+    throw new Error(data.message || 'Error al obtener usuario');
+  }
+
+  return data.data as Usuario;
+}
+
 // Funciones de utilidad para localStorage
 export function guardarUsuarioLocal(usuario: Usuario): void {
   localStorage.setItem('usuario', JSON.stringify(usuario));

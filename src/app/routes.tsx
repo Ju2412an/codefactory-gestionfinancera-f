@@ -6,12 +6,17 @@ import { Budgets } from "./components/Budgets";
 import { Income } from "./components/Income";
 import { Expenses } from "./components/Expenses";
 import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
 import { UsersPage } from "./pages/UsersPage";
 
 export const router = createBrowserRouter([
   {
     path: "/login",
     Component: LoginPage,
+  },
+  {
+    path: "/register",
+    Component: RegisterPage,
   },
   {
     Component: ProtectedRoute,

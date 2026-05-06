@@ -5,6 +5,7 @@ import { Dashboard } from "./components/Dashboard";
 import { Budgets } from "./components/Budgets";
 import { Income } from "./components/Income";
 import { Expenses } from "./components/Expenses";
+import { Categories } from "./components/Categories";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { UsersPage } from "./pages/UsersPage";
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, Component: Dashboard },
           { path: "users", Component: UsersPage },
+          { path: "categories", Component: Categories },
           { path: "budgets", Component: Budgets },
           { path: "income", Component: Income },
           { path: "expenses", Component: Expenses },

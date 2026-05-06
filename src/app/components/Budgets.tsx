@@ -1,215 +1,131 @@
-import { useState } from "react";
-import { useFinance } from "../context/FinanceContext";
-import { Plus, Trash2, Edit2 } from "lucide-react";
-
-type Budget = {
-  id: string;
-  category: string;
-  amount: number;
-  spent?: number;
-  period: "monthly" | "yearly";
-};
+import { useEffect, useState } from "react";
+import { Wallet, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import {
+  obtenerPresupuesto,
+  inicializarPresupuesto,
+  type Presupuesto,
+} from "../services/apiService";
 
 export function Budgets() {
-  const { budgets, addBudget, updateBudget, deleteBudget } = useFinance();
-
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [presupuesto, setPresupuesto] = useState<Presupuesto | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [valor, setValor] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const [formData, setFormData] = useState({
-    category: "",
-    amount: "",
-    period: "monthly" as "monthly" | "yearly",
-  });
+  const cargar = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const p = await obtenerPresupuesto();
+      setPresupuesto(p);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error al cargar presupuesto");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    cargar();
+  }, []);
+
+  const handleInicializar = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
-    const amount = parseFloat(formData.amount);
-
-    if (isNaN(amount) || amount <= 0) {
-      setError("El monto debe ser un número válido mayor a 0");
+    const v = parseFloat(valor);
+    if (isNaN(v) || v <= 0) {
+      setError("El monto debe ser un número mayor a 0");
       return;
     }
 
+    setSubmitting(true);
     try {
-      if (editingId) {
-        updateBudget(editingId, {
-          category: formData.category,
-          amount,
-          period: formData.period,
-        });
-      } else {
-        addBudget({
-          category: formData.category,
-          amount,
-          period: formData.period,
-        });
-      }
-
-      resetForm();
+      const nuevo = await inicializarPresupuesto(v);
+      setPresupuesto(nuevo);
+      setValor("");
+      setSuccess(`Presupuesto inicializado en $${nuevo.total.toLocaleString()}`);
     } catch (err) {
-      setError("Error al guardar el presupuesto");
+      setError(err instanceof Error ? err.message : "Error al inicializar");
+    } finally {
+      setSubmitting(false);
     }
-  };
-
-  const handleEdit = (budget: Budget) => {
-    setFormData({
-      category: budget.category,
-      amount: budget.amount.toString(),
-      period: budget.period,
-    });
-    setEditingId(budget.id);
-    setShowForm(true);
-  };
-
-  const handleCancel = () => {
-    resetForm();
-  };
-
-  const resetForm = () => {
-    setFormData({ category: "", amount: "", period: "monthly" });
-    setEditingId(null);
-    setShowForm(false);
-    setError("");
   };
 
   return (
     <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Presupuestos</h2>
-        <button
-          onClick={() => {
-            if (editingId) {
-              handleCancel();
-            } else {
-              setShowForm(!showForm);
-            }
-          }}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          {editingId ? "Cancelar edición" : "Nuevo Presupuesto"}
-        </button>
+      <div className="flex items-center gap-3">
+        <Wallet className="w-8 h-8 text-blue-600" />
+        <h2 className="text-2xl font-bold">Presupuesto</h2>
       </div>
 
-      {/* ERROR */}
       {error && (
-        <div className="bg-red-50 border border-red-200 p-3 rounded text-sm text-red-700">
-          {error}
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+          <AlertCircle className="w-5 h-5 text-red-500" />
+          <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
 
-      {/* FORM */}
-      {showForm && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            {editingId ? "Editar Presupuesto" : "Agregar Presupuesto"}
-          </h3>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="text"
-              placeholder="Categoría"
-              value={formData.category}
-              onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value })
-              }
-              className="w-full px-3 py-2 border rounded-lg"
-              required
-            />
-
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Monto"
-              value={formData.amount}
-              onChange={(e) =>
-                setFormData({ ...formData, amount: e.target.value })
-              }
-              className="w-full px-3 py-2 border rounded-lg"
-              required
-            />
-
-            <select
-              value={formData.period}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  period: e.target.value as "monthly" | "yearly",
-                })
-              }
-              className="w-full px-3 py-2 border rounded-lg"
-            >
-              <option value="monthly">Mensual</option>
-              <option value="yearly">Anual</option>
-            </select>
-
-            <div className="flex gap-2">
-              <button className="flex-1 bg-blue-600 text-white py-2 rounded-lg">
-                {editingId ? "Actualizar" : "Guardar"}
-              </button>
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="flex-1 bg-gray-200 py-2 rounded-lg"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+      {success && (
+        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-md">
+          <CheckCircle2 className="w-5 h-5 text-green-500" />
+          <p className="text-sm text-green-700">{success}</p>
         </div>
       )}
 
-      {/* LISTA */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {budgets.map((budget: Budget) => {
-          const spent = budget.spent || 0;
-          const percentage = (spent / budget.amount) * 100;
-          const isOverBudget = percentage > 100;
+      <div className="bg-white rounded-lg shadow p-6">
+        <p className="text-sm text-gray-500">Saldo actual</p>
+        {loading ? (
+          <div className="flex items-center gap-2 mt-2 text-gray-500">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Cargando...
+          </div>
+        ) : presupuesto ? (
+          <p className="text-4xl font-bold text-blue-600 mt-2">
+            ${presupuesto.total.toLocaleString()}
+          </p>
+        ) : (
+          <p className="text-gray-500 mt-2">
+            Aún no hay presupuesto. Inicialízalo abajo.
+          </p>
+        )}
+      </div>
 
-          return (
-            <div key={budget.id} className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between mb-4">
-                <div>
-                  <h3 className="font-semibold">{budget.category}</h3>
-                  <p className="text-sm text-gray-500">
-                    {budget.period === "monthly" ? "Mensual" : "Anual"}
-                  </p>
-                </div>
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">
+          {presupuesto ? "Reinicializar presupuesto" : "Inicializar presupuesto"}
+        </h3>
 
-                <div className="flex gap-2">
-                  <button onClick={() => handleEdit(budget)}>
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => deleteBudget(budget.id)}>
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </button>
-                </div>
-              </div>
+        <form onSubmit={handleInicializar} className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="Monto inicial"
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+            disabled={submitting}
+            className="flex-1 px-3 py-2 border rounded-lg"
+            required
+          />
 
-              <div className="text-sm mb-2">
-                ${spent.toLocaleString()} / ${budget.amount.toLocaleString()}
-              </div>
+          <button
+            type="submit"
+            disabled={submitting}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg disabled:opacity-50"
+          >
+            {submitting ? "Guardando..." : presupuesto ? "Reinicializar" : "Inicializar"}
+          </button>
+        </form>
 
-              <div className="w-full bg-gray-200 h-2 rounded">
-                <div
-                  className={`h-2 rounded ${
-                    isOverBudget
-                      ? "bg-red-600"
-                      : percentage > 75
-                      ? "bg-yellow-500"
-                      : "bg-green-500"
-                  }`}
-                  style={{ width: `${Math.min(percentage, 100)}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
+        {presupuesto && (
+          <p className="text-xs text-gray-500 mt-3">
+            ⚠️ Reinicializar reemplazará el saldo actual.
+          </p>
+        )}
       </div>
     </div>
   );

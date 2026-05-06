@@ -1,195 +1,171 @@
-import { useMemo } from "react";
-import { useFinance } from "../context/FinanceContext";
-import { Wallet, TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 import {
-  PieChart, Pie, Cell,
-  BarChart, Bar,
-  XAxis, YAxis,
-  CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer
-} from "recharts";
+  Wallet,
+  Tag,
+  TrendingUp,
+  TrendingDown,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+import {
+  obtenerPresupuesto,
+  obtenerCategorias,
+  listarMovimientos,
+  type Presupuesto,
+  type Categoria,
+  type Movimiento,
+} from "../services/apiService";
 
 export function Dashboard() {
-  const { budgets, income, expenses } = useFinance();
+  const [presupuesto, setPresupuesto] = useState<Presupuesto | null>(null);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // ✅ Totales optimizados
-  const totalIncome = useMemo(
-    () => income.reduce((sum, i) => sum + i.amount, 0),
-    [income]
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const [p, cats, movs] = await Promise.all([
+          obtenerPresupuesto(),
+          obtenerCategorias(),
+          listarMovimientos(),
+        ]);
+        setPresupuesto(p);
+        setCategorias(cats);
+        setMovimientos(movs);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error al cargar dashboard");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const totalIngresos = useMemo(
+    () => movimientos.filter((m) => m.tipo === "INGRESO").reduce((s, m) => s + m.valor, 0),
+    [movimientos],
   );
-
-  const totalExpenses = useMemo(
-    () => expenses.reduce((sum, e) => sum + e.amount, 0),
-    [expenses]
+  const totalGastos = useMemo(
+    () => movimientos.filter((m) => m.tipo === "GASTO").reduce((s, m) => s + m.valor, 0),
+    [movimientos],
   );
+  const ultimos = movimientos.slice(0, 5);
+  const cats = categorias.length;
 
-  const totalBudget = useMemo(
-    () => budgets.reduce((sum, b) => sum + b.amount, 0),
-    [budgets]
-  );
-
-  const balance = totalIncome - totalExpenses;
-
-  // ✅ Pie data
-  const pieData = useMemo(() => {
-    const grouped: Record<string, number> = {};
-
-    expenses.forEach((e) => {
-      grouped[e.category] = (grouped[e.category] || 0) + e.amount;
-    });
-
-    return Object.entries(grouped).map(([name, value]) => ({
-      name,
-      value,
-    }));
-  }, [expenses]);
-
-  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
-
-  // ✅ Budget data
-  const budgetData = useMemo(() => {
-    return budgets.map((b) => ({
-      category: b.category,
-      presupuesto: b.amount,
-      gastado: b.spent,
-    }));
-  }, [budgets]);
-
-  // ✅ Actividad reciente (CORREGIDO)
-  const recentActivity = useMemo(() => {
-    const merged = [
-      ...income.map((i) => ({ ...i, type: "income" })),
-      ...expenses.map((e) => ({ ...e, type: "expense" })),
-    ];
-
-    return merged
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-  }, [income, expenses]);
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Panel</h2>
 
-      {/* Cards */}
+      {error && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+          <AlertCircle className="w-5 h-5 text-red-500" />
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-
         <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-gray-600">Ingresos Totales</p>
-          <p className="text-2xl font-bold text-green-600 mt-2">
-            ${totalIncome.toLocaleString()}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-gray-600">Gastos Totales</p>
-          <p className="text-2xl font-bold text-red-600 mt-2">
-            ${totalExpenses.toLocaleString()}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-gray-600">Balance</p>
-          <p className={`text-2xl font-bold mt-2 ${balance >= 0 ? "text-blue-600" : "text-red-600"}`}>
-            ${balance.toLocaleString()}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <p className="text-sm text-gray-600">Presupuesto Total</p>
-          <p className="text-2xl font-bold text-purple-600 mt-2">
-            ${totalBudget.toLocaleString()}
-          </p>
-        </div>
-
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Bar */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Estado de Presupuestos</h2>
-
-          {budgetData.length === 0 ? (
-            <p className="text-gray-500 text-center">No hay presupuestos</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={budgetData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="presupuesto" fill="#3b82f6" />
-                <Bar dataKey="gastado" fill="#ef4444" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-
-        </div>
-
-        {/* Pie */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold mb-4">Gastos por Categoría</h2>
-
-          {pieData.length === 0 ? (
-            <p className="text-gray-500 text-center">No hay gastos</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  outerRadius={100}
-                  label={({ name, percent }) =>
-                    `${name} ${((percent || 0) * 100).toFixed(0)}%`
-                  }
-                >
-                  {pieData.map((_, index) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-
-        </div>
-
-      </div>
-
-      {/* Actividad */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">Actividad Reciente</h2>
-
-        {recentActivity.length === 0 ? (
-          <p className="text-gray-500 text-center">Sin movimientos</p>
-        ) : (
-          <div className="space-y-3">
-            {recentActivity.map((item) => (
-              <div key={item.id} className="flex justify-between border-b pb-2">
-                <div>
-                  <p className="font-medium">{item.description}</p>
-                  <p className="text-sm text-gray-500">{item.category}</p>
-                </div>
-
-                <div className="text-right">
-                  <p className={`font-semibold ${
-                    item.type === "income" ? "text-green-600" : "text-red-600"
-                  }`}>
-                    {item.type === "income" ? "+" : "-"}${item.amount.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(item.date).toLocaleDateString("es-ES")}
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-500">Saldo presupuesto</p>
+            <Wallet className="w-5 h-5 text-blue-500" />
           </div>
-        )}
+          {presupuesto ? (
+            <p className="text-3xl font-bold text-blue-600">
+              ${presupuesto.total.toLocaleString()}
+            </p>
+          ) : (
+            <p className="text-sm text-yellow-600 mt-2">
+              Sin inicializar — ve a{" "}
+              <Link to="/budgets" className="underline">Presupuesto</Link>
+            </p>
+          )}
+        </div>
 
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-500">Total ingresos</p>
+            <TrendingUp className="w-5 h-5 text-green-500" />
+          </div>
+          <p className="text-3xl font-bold text-green-600">
+            ${totalIngresos.toLocaleString()}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-500">Total gastos</p>
+            <TrendingDown className="w-5 h-5 text-red-500" />
+          </div>
+          <p className="text-3xl font-bold text-red-600">
+            ${totalGastos.toLocaleString()}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-gray-500">Categorías</p>
+            <Tag className="w-5 h-5 text-purple-500" />
+          </div>
+          <p className="text-3xl font-bold text-purple-600">{cats}</p>
+        </div>
       </div>
 
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">Acciones rápidas</h3>
+        <div className="flex flex-wrap gap-3">
+          <Link to="/income" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2">
+            <TrendingUp className="w-4 h-4" /> Registrar ingreso
+          </Link>
+          <Link to="/expenses" className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2">
+            <TrendingDown className="w-4 h-4" /> Registrar gasto
+          </Link>
+          <Link to="/categories" className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2">
+            <Tag className="w-4 h-4" /> Gestionar categorías
+          </Link>
+          <Link to="/budgets" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2">
+            <Wallet className="w-4 h-4" /> Presupuesto
+          </Link>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="p-4 border-b">
+          <h3 className="text-lg font-semibold">Últimos movimientos</h3>
+        </div>
+        {ultimos.length === 0 ? (
+          <p className="text-center text-gray-500 py-8">Sin movimientos aún</p>
+        ) : (
+          <ul className="divide-y">
+            {ultimos.map((m) => (
+              <li key={m.id} className="p-4 flex justify-between">
+                <div>
+                  <p className="font-medium">
+                    {m.tipo === "INGRESO" ? "🟢" : "🔴"} {m.descripcion || m.categoriaNombre || "Movimiento"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {m.categoriaNombre} · {new Date(m.fecha).toLocaleString("es-ES")}
+                  </p>
+                </div>
+                <p className={`font-semibold ${m.tipo === "INGRESO" ? "text-green-600" : "text-red-600"}`}>
+                  {m.tipo === "INGRESO" ? "+" : "-"}${m.valor.toLocaleString()}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

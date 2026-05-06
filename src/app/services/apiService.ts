@@ -53,6 +53,73 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // =========================
+// MODELOS DE DOMINIO (alineados con back)
+// =========================
+
+export type TipoCategoria = 'INGRESO' | 'GASTO';
+
+// Coincide con com.pruebareservas.entity.CategoriaEntity
+export interface Categoria {
+  id?: number;
+  nombre: string;
+  tipo: TipoCategoria;
+}
+
+// Coincide con com.pruebareservas.entity.PresupuestoEntity
+export interface Presupuesto {
+  id?: number;
+  total: number;
+}
+
+// Coincide con com.pruebareservas.dto.MovimientoDTO (request)
+export interface MovimientoInput {
+  valor: number;
+  categoriaId: number;
+  descripcion?: string;
+}
+
+// Coincide con com.pruebareservas.dto.MovimientoDTO (response)
+export interface Movimiento {
+  id: number;
+  tipo: TipoCategoria; // INGRESO | GASTO
+  valor: number;
+  descripcion?: string;
+  fecha: string;
+  categoriaId?: number;
+  categoriaNombre?: string;
+}
+
+// =========================
+// HELPER SIN ENVELOPE (endpoints que devuelven la entidad cruda)
+// =========================
+
+async function rawRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    let msg = `Error ${response.status}`;
+    try {
+      const text = await response.text();
+      if (text) msg = text;
+    } catch {
+      // ignorar
+    }
+    throw new Error(msg);
+  }
+
+  if (response.status === 204) return undefined as unknown as T;
+
+  const text = await response.text();
+  return text ? (JSON.parse(text) as T) : (undefined as unknown as T);
+}
+
+// =========================
 // USUARIOS
 // =========================
 
@@ -85,6 +152,79 @@ export async function listarUsuarios(): Promise<Usuario[]> {
 // GET /api/usuarios/{id}
 export async function obtenerUsuarioPorId(id: number): Promise<Usuario> {
   return request<Usuario>(`/usuarios/${id}`);
+}
+
+// =========================
+// CATEGORÍAS
+// =========================
+
+// GET /api/categorias
+export async function obtenerCategorias(): Promise<Categoria[]> {
+  return rawRequest<Categoria[]>('/categorias');
+}
+
+// POST /api/categorias  body: {nombre, tipo}
+export async function crearCategoria(nombre: string, tipo: TipoCategoria): Promise<Categoria> {
+  return rawRequest<Categoria>('/categorias', {
+    method: 'POST',
+    body: JSON.stringify({ nombre, tipo }),
+  });
+}
+
+// =========================
+// PRESUPUESTO + MOVIMIENTOS (scoped al usuario logueado)
+// =========================
+
+function requireUsuarioId(): number {
+  const u = obtenerUsuarioLocal();
+  if (!u || u.id == null) {
+    throw new Error('No hay usuario autenticado');
+  }
+  return u.id;
+}
+
+function withUsuarioId(path: string): string {
+  const sep = path.includes('?') ? '&' : '?';
+  return `${path}${sep}usuarioId=${requireUsuarioId()}`;
+}
+
+// GET /api/gastos?usuarioId=X
+export async function obtenerPresupuesto(): Promise<Presupuesto | null> {
+  try {
+    return await rawRequest<Presupuesto>(withUsuarioId('/gastos'));
+  } catch {
+    // El back lanza si no hay presupuesto inicializado para este usuario
+    return null;
+  }
+}
+
+// POST /api/gastos/inicializar/{valor}?usuarioId=X
+export async function inicializarPresupuesto(valor: number): Promise<Presupuesto> {
+  return rawRequest<Presupuesto>(
+    withUsuarioId(`/gastos/inicializar/${encodeURIComponent(valor)}`),
+    { method: 'POST' },
+  );
+}
+
+// POST /api/gastos/ingreso?usuarioId=X
+export async function registrarIngreso(input: MovimientoInput): Promise<Presupuesto> {
+  return rawRequest<Presupuesto>(withUsuarioId('/gastos/ingreso'), {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+// POST /api/gastos/gasto?usuarioId=X
+export async function registrarGasto(input: MovimientoInput): Promise<Presupuesto> {
+  return rawRequest<Presupuesto>(withUsuarioId('/gastos/gasto'), {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+// GET /api/gastos/movimientos?usuarioId=X
+export async function listarMovimientos(): Promise<Movimiento[]> {
+  return rawRequest<Movimiento[]>(withUsuarioId('/gastos/movimientos'));
 }
 
 // =========================

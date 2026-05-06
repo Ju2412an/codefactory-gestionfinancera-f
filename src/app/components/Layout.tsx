@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from "react-router";
-import { LayoutDashboard, Wallet, TrendingUp, TrendingDown, Users, LogOut } from "lucide-react";
+import { LayoutDashboard, Wallet, TrendingUp, TrendingDown, Users, LogOut, Tag } from "lucide-react";
 import { limpiarAutenticacion, obtenerUsuarioLocal, estaAutenticado } from "../services/apiService";
 import { useEffect } from "react";
 
@@ -81,6 +81,20 @@ export function Layout() {
             </NavLink>
 
             <NavLink
+              to="/categories"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-4 border-b-2 transition-colors whitespace-nowrap ${
+                  isActive
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+                }`
+              }
+            >
+              <Tag className="w-5 h-5" />
+              <span>Categorías</span>
+            </NavLink>
+
+            <NavLink
               to="/budgets"
               className={({ isActive }) =>
                 `flex items-center gap-2 px-3 py-4 border-b-2 transition-colors whitespace-nowrap ${
@@ -91,7 +105,7 @@ export function Layout() {
               }
             >
               <Wallet className="w-5 h-5" />
-              <span>Presupuestos</span>
+              <span>Presupuesto</span>
             </NavLink>
 
             <NavLink

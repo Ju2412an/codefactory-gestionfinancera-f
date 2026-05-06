@@ -50,84 +50,90 @@ export const useFinance = () => {
 };
 
 export const FinanceProvider = ({ children }: { children: ReactNode }) => {
-  const [budgets, setBudgets] = useState<Budget[]>([
-    { id: "1", category: "Alimentación", amount: 500, spent: 320, period: "monthly" },
-    { id: "2", category: "Transporte", amount: 200, spent: 150, period: "monthly" },
-    { id: "3", category: "Entretenimiento", amount: 150, spent: 80, period: "monthly" },
-  ]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [income, setIncome] = useState<Income[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
-  const [income, setIncome] = useState<Income[]>([
-    { id: "1", description: "Salario", amount: 3000, date: "2026-04-01", category: "Salario" },
-    { id: "2", description: "Freelance", amount: 500, date: "2026-04-05", category: "Trabajo Extra" },
-  ]);
-
-  const [expenses, setExpenses] = useState<Expense[]>([
-    { id: "1", description: "Supermercado", amount: 120, date: "2026-04-02", category: "Alimentación" },
-    { id: "2", description: "Gasolina", amount: 60, date: "2026-04-03", category: "Transporte" },
-    { id: "3", description: "Restaurante", amount: 45, date: "2026-04-04", category: "Alimentación" },
-    { id: "4", description: "Cine", amount: 30, date: "2026-04-06", category: "Entretenimiento" },
-  ]);
-
+  // -------------------- BUDGET --------------------
   const addBudget = (budget: Omit<Budget, "id" | "spent">) => {
     const newBudget: Budget = {
       ...budget,
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       spent: 0,
     };
-    setBudgets([...budgets, newBudget]);
+    setBudgets((prev) => [...prev, newBudget]);
   };
 
   const updateBudget = (id: string, updatedBudget: Partial<Budget>) => {
-    setBudgets(budgets.map((b) => (b.id === id ? { ...b, ...updatedBudget } : b)));
+    setBudgets((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, ...updatedBudget } : b))
+    );
   };
 
   const deleteBudget = (id: string) => {
-    setBudgets(budgets.filter((b) => b.id !== id));
+    setBudgets((prev) => prev.filter((b) => b.id !== id));
   };
 
+  // -------------------- INCOME --------------------
   const addIncome = (newIncome: Omit<Income, "id">) => {
-    const income: Income = {
+    const incomeItem: Income = {
       ...newIncome,
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
     };
-    setIncome((prev) => [...prev, income]);
+    setIncome((prev) => [...prev, incomeItem]);
   };
 
   const updateIncome = (id: string, updatedIncome: Partial<Income>) => {
-    setIncome((prev) => prev.map((i) => (i.id === id ? { ...i, ...updatedIncome } : i)));
+    setIncome((prev) =>
+      prev.map((i) => (i.id === id ? { ...i, ...updatedIncome } : i))
+    );
   };
 
   const deleteIncome = (id: string) => {
     setIncome((prev) => prev.filter((i) => i.id !== id));
   };
 
+  // -------------------- EXPENSE --------------------
   const addExpense = (newExpense: Omit<Expense, "id">) => {
-    const expense: Expense = {
+    const expenseItem: Expense = {
       ...newExpense,
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
     };
-    setExpenses((prev) => [...prev, expense]);
-    
-    // Update budget spent
-    const budget = budgets.find((b) => b.category === newExpense.category);
-    if (budget) {
-      updateBudget(budget.id, { spent: budget.spent + newExpense.amount });
-    }
+
+    setExpenses((prev) => [...prev, expenseItem]);
+
+    // 🔥 actualizar presupuesto correctamente (sin usar estado viejo)
+    setBudgets((prev) =>
+      prev.map((b) =>
+        b.category === newExpense.category
+          ? { ...b, spent: b.spent + newExpense.amount }
+          : b
+      )
+    );
   };
 
   const updateExpense = (id: string, updatedExpense: Partial<Expense>) => {
-    setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...updatedExpense } : e)));
+    setExpenses((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updatedExpense } : e))
+    );
   };
 
   const deleteExpense = (id: string) => {
-    const expense = expenses.find((e) => e.id === id);
-    if (expense) {
-      const budget = budgets.find((b) => b.category === expense.category);
-      if (budget) {
-        updateBudget(budget.id, { spent: Math.max(0, budget.spent - expense.amount) });
+    setExpenses((prevExpenses) => {
+      const expense = prevExpenses.find((e) => e.id === id);
+
+      if (expense) {
+        setBudgets((prevBudgets) =>
+          prevBudgets.map((b) =>
+            b.category === expense.category
+              ? { ...b, spent: Math.max(0, b.spent - expense.amount) }
+              : b
+          )
+        );
       }
-    }
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+
+      return prevExpenses.filter((e) => e.id !== id);
+    });
   };
 
   return (

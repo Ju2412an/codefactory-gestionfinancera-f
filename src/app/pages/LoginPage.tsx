@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router';
-import { autenticar, guardarUsuarioLocal } from '../services/apiService';
+import { useNavigate, Link } from 'react-router-dom';
+import { login, guardarUsuario } from '../services/apiService';
 import { Eye, EyeOff, AlertCircle, LoaderCircle, DollarSign } from 'lucide-react';
 
 const MAX_ATTEMPTS = 3;
@@ -20,8 +20,8 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      const usuario = await autenticar(email, password);
-      guardarUsuarioLocal(usuario);
+      const usuario = await login(email, password);
+      guardarUsuario(usuario);
       navigate('/');
     } catch (err) {
       const remaining = attempts - 1;
@@ -45,7 +45,7 @@ export function LoginPage() {
       {/* Title */}
       <h1 className="text-2xl font-bold text-[#2c5f7c] mb-6">Inicia sesión</h1>
 
-      {/* Error banner */}
+      {/* Error */}
       {error && attempts < MAX_ATTEMPTS && (
         <div className="w-full max-w-md mb-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -59,6 +59,7 @@ export function LoginPage() {
       {/* Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
         <form onSubmit={handleLogin} className="space-y-5">
+          
           {/* Email */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-[#2c3e50] uppercase tracking-wide">
@@ -66,7 +67,7 @@ export function LoginPage() {
             </label>
             <input
               type="email"
-              placeholder="maria.restrepo@gmail.com"
+              placeholder="correo@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -107,22 +108,23 @@ export function LoginPage() {
             className="w-full bg-[#2c5f7c] hover:bg-[#234d65] text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             {loading ? (
-              <><LoaderCircle className="w-5 h-5 animate-spin mr-2" /> Ingresando...</>
+              <>
+                <LoaderCircle className="w-5 h-5 animate-spin mr-2" />
+                Ingresando...
+              </>
             ) : (
               'Ingresar'
             )}
           </button>
 
-          {/* Forgot password */}
-          <p className="text-center">
-            <span className="text-sm text-[#2c5f7c] cursor-pointer hover:underline">
-              ¿Olvidaste tu contraseña?
-            </span>
+          {/* Forgot */}
+          <p className="text-center text-sm text-[#2c5f7c] hover:underline cursor-pointer">
+            ¿Olvidaste tu contraseña?
           </p>
         </form>
       </div>
 
-      {/* Register link */}
+      {/* Register */}
       <p className="mt-8 text-sm text-[#2c5f7c]">
         ¿No tienes cuenta?{' '}
         <Link to="/register" className="font-bold underline hover:text-[#234d65]">

@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router";
 import { estaAutenticado } from "../services/apiService";
 
 export function ProtectedRoute() {

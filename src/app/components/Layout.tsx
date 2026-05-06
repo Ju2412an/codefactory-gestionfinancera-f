@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate } from "react-router";
 import { LayoutDashboard, Wallet, TrendingUp, TrendingDown, Users, LogOut } from "lucide-react";
 import { limpiarAutenticacion, obtenerUsuarioLocal, estaAutenticado } from "../services/apiService";
 import { useEffect } from "react";

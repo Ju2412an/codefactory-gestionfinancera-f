@@ -2,148 +2,110 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 // =========================
-// INTERFACES
+// TIPOS (alineados con backend)
 // =========================
 
+// Coincide con com.pruebareservas.dto.ApiResponseDTO
 export interface ApiResponse<T> {
-  status: number;
+  statusCode: number;
   message: string;
   data: T;
+  success: boolean;
 }
 
-// Usuario
+// Coincide con com.pruebareservas.dto.UsuarioDTO
 export interface Usuario {
   id?: number;
-  nombre: string;
   email: string;
+  nombre: string;
+  apellido: string;
+  autenticado?: boolean;
+  fechaRegistro?: string;
   password?: string;
 }
 
-// Categoría
-export interface Categoria {
-  id?: number;
-  nombre: string;
-  tipo: 'INGRESO' | 'GASTO';
-}
-
-// Movimiento (Ingreso o Gasto)
-export interface Movimiento {
-  id?: number;
-  monto: number;
-  fecha: string;
-  tipo: 'INGRESO' | 'GASTO';
-  categoriaId: number;
-  descripcion?: string;
-}
-
 // =========================
-// USUARIO
+// HELPER
 // =========================
 
-export async function registrarUsuario(usuario: Usuario): Promise<Usuario> {
-  const response = await fetch(`${API_BASE_URL}/usuarios`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(usuario),
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    },
   });
 
-  const data: ApiResponse<Usuario> = await response.json();
-  return data.data;
+  let body: ApiResponse<T> | null = null;
+  try {
+    body = await response.json();
+  } catch {
+    // sin cuerpo o cuerpo no-JSON
+  }
+
+  if (!response.ok || (body && body.success === false)) {
+    const msg = body?.message || `Error ${response.status}`;
+    throw new Error(msg);
+  }
+
+  return (body?.data ?? (undefined as unknown)) as T;
 }
 
-export async function login(email: string, password: string): Promise<Usuario> {
-  const response = await fetch(`${API_BASE_URL}/usuarios/login`, {
+// =========================
+// USUARIOS
+// =========================
+
+// POST /api/usuarios/registro  body: {email, nombre, apellido, password}
+export async function registrarUsuario(
+  email: string,
+  nombre: string,
+  apellido: string,
+  password: string,
+): Promise<Usuario> {
+  return request<Usuario>('/usuarios/registro', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, nombre, apellido, password }),
+  });
+}
+
+// POST /api/usuarios/autenticar  body: {email, password}
+export async function login(email: string, password: string): Promise<Usuario> {
+  return request<Usuario>('/usuarios/autenticar', {
+    method: 'POST',
     body: JSON.stringify({ email, password }),
   });
+}
 
-  const data: ApiResponse<Usuario> = await response.json();
-  return data.data;
+// GET /api/usuarios
+export async function listarUsuarios(): Promise<Usuario[]> {
+  return request<Usuario[]>('/usuarios');
+}
+
+// GET /api/usuarios/{id}
+export async function obtenerUsuarioPorId(id: number): Promise<Usuario> {
+  return request<Usuario>(`/usuarios/${id}`);
 }
 
 // =========================
-// CATEGORÍAS
+// AUTH LOCAL (localStorage)
 // =========================
 
-export async function obtenerCategorias(): Promise<Categoria[]> {
-  const response = await fetch(`${API_BASE_URL}/categorias`);
-  const data: ApiResponse<Categoria[]> = await response.json();
-  return data.data;
+const STORAGE_KEY = 'usuario';
+
+export function guardarUsuario(usuario: Usuario): void {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(usuario));
 }
 
-export async function crearCategoria(categoria: Categoria): Promise<Categoria> {
-  const response = await fetch(`${API_BASE_URL}/categorias`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(categoria),
-  });
-
-  const data: ApiResponse<Categoria> = await response.json();
-  return data.data;
+export function obtenerUsuarioLocal(): Usuario | null {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  return raw ? (JSON.parse(raw) as Usuario) : null;
 }
 
-// =========================
-// MOVIMIENTOS (INGRESOS / GASTOS)
-// =========================
-
-export async function obtenerMovimientos(): Promise<Movimiento[]> {
-  const response = await fetch(`${API_BASE_URL}/movimientos`);
-  const data: ApiResponse<Movimiento[]> = await response.json();
-  return data.data;
+export function limpiarAutenticacion(): void {
+  localStorage.removeItem(STORAGE_KEY);
 }
 
-export async function crearMovimiento(movimiento: Movimiento): Promise<Movimiento> {
-  const response = await fetch(`${API_BASE_URL}/movimientos`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(movimiento),
-  });
-
-  const data: ApiResponse<Movimiento> = await response.json();
-  return data.data;
-}
-
-export async function eliminarMovimiento(id: number): Promise<void> {
-  await fetch(`${API_BASE_URL}/movimientos/${id}`, {
-    method: 'DELETE',
-  });
-}
-
-// =========================
-// PRESUPUESTO
-// =========================
-
-export async function obtenerPresupuesto(): Promise<number> {
-  const response = await fetch(`${API_BASE_URL}/presupuesto`);
-  const data: ApiResponse<number> = await response.json();
-  return data.data;
-}
-
-export async function actualizarPresupuesto(valor: number): Promise<number> {
-  const response = await fetch(`${API_BASE_URL}/presupuesto`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ valor }),
-  });
-
-  const data: ApiResponse<number> = await response.json();
-  return data.data;
-}
-
-// =========================
-// LOCAL STORAGE (AUTH)
-// =========================
-
-export function guardarUsuario(usuario: Usuario) {
-  localStorage.setItem('usuario', JSON.stringify(usuario));
-}
-
-export function obtenerUsuario(): Usuario | null {
-  const user = localStorage.getItem('usuario');
-  return user ? JSON.parse(user) : null;
-}
-
-export function logout() {
-  localStorage.removeItem('usuario');
+export function estaAutenticado(): boolean {
+  return obtenerUsuarioLocal() !== null;
 }

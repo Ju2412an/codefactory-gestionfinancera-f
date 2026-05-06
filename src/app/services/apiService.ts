@@ -1,246 +1,149 @@
-// API Service para comunicarse con el backend
+// URL base del backend
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
-// Interfaces para respuestas
+// =========================
+// INTERFACES
+// =========================
+
 export interface ApiResponse<T> {
-  statusCode: number;
+  status: number;
   message: string;
-  data: T | null;
-  success: boolean;
+  data: T;
 }
 
+// Usuario
 export interface Usuario {
-  id: number;
-  email: string;
-  nombre: string;
-  apellido: string;
-  autenticado: boolean;
-  fechaRegistro: string;
-}
-
-export interface Espacio {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  ubicacion: string;
-  capacidad: number;
-  estado: string;
-  fechaCreacion: string;
-}
-
-export interface Franja {
-  horaInicio: string;
-  horaFin: string;
-  estado: string; // DISPONIBLE o OCUPADO
-  reservaId?: number | null;
-}
-
-export interface Calendario {
-  espacioId: number;
-  espacioNombre: string;
-  fecha: string;
-  franjas: Franja[];
-  totalDisponibles: number;
-  totalOcupados: number;
-  tieneDisponibilidad: boolean;
-}
-
-export interface Reserva {
   id?: number;
-  usuarioId: number;
-  espacioId: number;
-  fechaInicio: string;
-  fechaFin: string;
-  estado?: string;
-  fechaCreacion?: string;
+  nombre: string;
+  email: string;
+  password?: string;
 }
 
-// Servicio de Autenticación
-export async function autenticar(email: string, password: string): Promise<Usuario> {
-  const response = await fetch(`${API_BASE_URL}/usuarios/autenticar`, {
+// Categoría
+export interface Categoria {
+  id?: number;
+  nombre: string;
+  tipo: 'INGRESO' | 'GASTO';
+}
+
+// Movimiento (Ingreso o Gasto)
+export interface Movimiento {
+  id?: number;
+  monto: number;
+  fecha: string;
+  tipo: 'INGRESO' | 'GASTO';
+  categoriaId: number;
+  descripcion?: string;
+}
+
+// =========================
+// USUARIO
+// =========================
+
+export async function registrarUsuario(usuario: Usuario): Promise<Usuario> {
+  const response = await fetch(`${API_BASE_URL}/usuarios`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(usuario),
+  });
+
+  const data: ApiResponse<Usuario> = await response.json();
+  return data.data;
+}
+
+export async function login(email: string, password: string): Promise<Usuario> {
+  const response = await fetch(`${API_BASE_URL}/usuarios/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   });
 
   const data: ApiResponse<Usuario> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || 'Error en la autenticación');
-  }
-
-  return data.data as Usuario;
+  return data.data;
 }
 
-// Servicio de Espacios
-export async function obtenerEspacios(): Promise<Espacio[]> {
-  const response = await fetch(`${API_BASE_URL}/espacios`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+// =========================
+// CATEGORÍAS
+// =========================
 
-  const data: ApiResponse<Espacio[]> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || 'Error al obtener espacios');
-  }
-
-  return data.data as Espacio[];
+export async function obtenerCategorias(): Promise<Categoria[]> {
+  const response = await fetch(`${API_BASE_URL}/categorias`);
+  const data: ApiResponse<Categoria[]> = await response.json();
+  return data.data;
 }
 
-export async function obtenerEspacio(id: number): Promise<Espacio> {
-  const response = await fetch(`${API_BASE_URL}/espacios/${id}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  const data: ApiResponse<Espacio> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || 'Error al obtener espacio');
-  }
-
-  return data.data as Espacio;
-}
-
-// Servicio de Calendario
-export async function obtenerCalendario(espacioId: number, fecha: string): Promise<Calendario> {
-  const response = await fetch(`${API_BASE_URL}/calendario/dia/${espacioId}?fecha=${fecha}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  const data: ApiResponse<Calendario> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || 'Error al obtener calendario');
-  }
-
-  return data.data as Calendario;
-}
-
-// Servicio de Reservas
-export async function crearReserva(reserva: Reserva): Promise<Reserva> {
-  const response = await fetch(`${API_BASE_URL}/reservas`, {
+export async function crearCategoria(categoria: Categoria): Promise<Categoria> {
+  const response = await fetch(`${API_BASE_URL}/categorias`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(reserva),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(categoria),
   });
 
-  const data: ApiResponse<Reserva> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || 'Error al crear la reserva');
-  }
-
-  return data.data as Reserva;
+  const data: ApiResponse<Categoria> = await response.json();
+  return data.data;
 }
 
-export async function obtenerReserva(id: number): Promise<Reserva> {
-  const response = await fetch(`${API_BASE_URL}/reservas/${id}`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+// =========================
+// MOVIMIENTOS (INGRESOS / GASTOS)
+// =========================
+
+export async function obtenerMovimientos(): Promise<Movimiento[]> {
+  const response = await fetch(`${API_BASE_URL}/movimientos`);
+  const data: ApiResponse<Movimiento[]> = await response.json();
+  return data.data;
+}
+
+export async function crearMovimiento(movimiento: Movimiento): Promise<Movimiento> {
+  const response = await fetch(`${API_BASE_URL}/movimientos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(movimiento),
   });
 
-  const data: ApiResponse<Reserva> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || 'Error al obtener reserva');
-  }
-
-  return data.data as Reserva;
+  const data: ApiResponse<Movimiento> = await response.json();
+  return data.data;
 }
 
-export async function cancelarReserva(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/reservas/${id}`, {
+export async function eliminarMovimiento(id: number): Promise<void> {
+  await fetch(`${API_BASE_URL}/movimientos/${id}`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
   });
-
-  const data: ApiResponse<null> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || 'Error al cancelar reserva');
-  }
 }
 
-// Servicio de Usuarios
-export async function registrarUsuario(email: string, nombre: string, apellido: string, password: string): Promise<Usuario> {
-  const response = await fetch(`${API_BASE_URL}/usuarios/registro`, {
-    method: 'POST',
+// =========================
+// PRESUPUESTO
+// =========================
+
+export async function obtenerPresupuesto(): Promise<number> {
+  const response = await fetch(`${API_BASE_URL}/presupuesto`);
+  const data: ApiResponse<number> = await response.json();
+  return data.data;
+}
+
+export async function actualizarPresupuesto(valor: number): Promise<number> {
+  const response = await fetch(`${API_BASE_URL}/presupuesto`, {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, nombre, apellido, password }),
+    body: JSON.stringify({ valor }),
   });
 
-  const data: ApiResponse<Usuario> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || 'Error al registrar usuario');
-  }
-
-  return data.data as Usuario;
+  const data: ApiResponse<number> = await response.json();
+  return data.data;
 }
 
-export async function listarUsuarios(): Promise<Usuario[]> {
-  const response = await fetch(`${API_BASE_URL}/usuarios`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-  });
+// =========================
+// LOCAL STORAGE (AUTH)
+// =========================
 
-  const data: ApiResponse<Usuario[]> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || 'Error al listar usuarios');
-  }
-
-  return data.data as Usuario[];
-}
-
-export async function obtenerUsuario(id: number): Promise<Usuario> {
-  const response = await fetch(`${API_BASE_URL}/usuarios/${id}`, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  const data: ApiResponse<Usuario> = await response.json();
-
-  if (!data.success) {
-    throw new Error(data.message || 'Error al obtener usuario');
-  }
-
-  return data.data as Usuario;
-}
-
-// Funciones de utilidad para localStorage
-export function guardarUsuarioLocal(usuario: Usuario): void {
+export function guardarUsuario(usuario: Usuario) {
   localStorage.setItem('usuario', JSON.stringify(usuario));
-  localStorage.setItem('isAuthenticated', 'true');
 }
 
-export function obtenerUsuarioLocal(): Usuario | null {
-  const usuario = localStorage.getItem('usuario');
-  return usuario ? JSON.parse(usuario) : null;
+export function obtenerUsuario(): Usuario | null {
+  const user = localStorage.getItem('usuario');
+  return user ? JSON.parse(user) : null;
 }
 
-export function limpiarAutenticacion(): void {
+export function logout() {
   localStorage.removeItem('usuario');
-  localStorage.removeItem('isAuthenticated');
-}
-
-export function estaAutenticado(): boolean {
-  return localStorage.getItem('isAuthenticated') === 'true';
 }

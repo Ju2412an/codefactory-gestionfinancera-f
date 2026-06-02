@@ -1,171 +1,259 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router";
+import { useEffect, useState } from "react";
 import {
   Wallet,
-  Tag,
   TrendingUp,
   TrendingDown,
+  AlertTriangle,
+  Lightbulb,
   Loader2,
-  AlertCircle,
 } from "lucide-react";
+
 import {
   obtenerPresupuesto,
-  obtenerCategorias,
-  listarMovimientos,
+  obtenerBalanceMensual,
+  obtenerAlertaPresupuesto,
+  obtenerRecomendaciones,
   type Presupuesto,
-  type Categoria,
-  type Movimiento,
+  type BalanceMensual,
+  type AlertaPresupuesto,
+  type Recomendacion,
 } from "../services/apiService";
 
 export function Dashboard() {
-  const [presupuesto, setPresupuesto] = useState<Presupuesto | null>(null);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+
+  const [presupuesto,setPresupuesto] =
+    useState<Presupuesto | null>(null);
+
+  const [balance,setBalance] =
+    useState<BalanceMensual | null>(null);
+
+  const [alerta,setAlerta] =
+    useState<AlertaPresupuesto | null>(null);
+
+  const [recomendaciones,setRecomendaciones] =
+    useState<Recomendacion | null>(null);
+
+  const [loading,setLoading] = useState(true);
+
+  const [error,setError] = useState("");
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      setError("");
+
+    async function cargar() {
+
       try {
-        const [p, cats, movs] = await Promise.all([
+
+        setLoading(true);
+
+        const [
+          presupuestoData,
+          balanceData,
+          alertaData,
+          recomendacionesData
+        ] = await Promise.all([
+
           obtenerPresupuesto(),
-          obtenerCategorias(),
-          listarMovimientos(),
+          obtenerBalanceMensual(),
+          obtenerAlertaPresupuesto(),
+          obtenerRecomendaciones()
+
         ]);
-        setPresupuesto(p);
-        setCategorias(cats);
-        setMovimientos(movs);
+
+        setPresupuesto(presupuestoData);
+        setBalance(balanceData);
+        setAlerta(alertaData);
+        setRecomendaciones(recomendacionesData);
+
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error al cargar dashboard");
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Error cargando dashboard"
+        );
+
       } finally {
+
         setLoading(false);
+
       }
-    })();
+    }
+
+    cargar();
+
   }, []);
 
-  const totalIngresos = useMemo(
-    () => movimientos.filter((m) => m.tipo === "INGRESO").reduce((s, m) => s + m.valor, 0),
-    [movimientos],
-  );
-  const totalGastos = useMemo(
-    () => movimientos.filter((m) => m.tipo === "GASTO").reduce((s, m) => s + m.valor, 0),
-    [movimientos],
-  );
-  const ultimos = movimientos.slice(0, 5);
-  const cats = categorias.length;
-
   if (loading) {
+
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <div className="flex justify-center py-16">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500"/>
       </div>
     );
   }
 
   return (
+
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Panel</h2>
+
+      <h2 className="text-2xl font-bold">
+        Dashboard Financiero
+      </h2>
 
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
-          <AlertCircle className="w-5 h-5 text-red-500" />
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-500">Saldo presupuesto</p>
-            <Wallet className="w-5 h-5 text-blue-500" />
+      <div className="grid md:grid-cols-4 gap-4">
+
+        <div className="bg-white rounded-lg shadow p-5">
+
+          <div className="flex justify-between">
+            <p className="text-gray-500">Presupuesto</p>
+            <Wallet className="text-blue-500"/>
           </div>
-          {presupuesto ? (
-            <p className="text-3xl font-bold text-blue-600">
-              ${presupuesto.total.toLocaleString()}
-            </p>
-          ) : (
-            <p className="text-sm text-yellow-600 mt-2">
-              Sin inicializar — ve a{" "}
-              <Link to="/budgets" className="underline">Presupuesto</Link>
-            </p>
-          )}
+
+          <h3 className="text-3xl font-bold text-blue-600 mt-3">
+            $
+            {presupuesto?.total.toLocaleString() ?? 0}
+          </h3>
+
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-500">Total ingresos</p>
-            <TrendingUp className="w-5 h-5 text-green-500" />
+        <div className="bg-white rounded-lg shadow p-5">
+
+          <div className="flex justify-between">
+            <p className="text-gray-500">Ingresos</p>
+            <TrendingUp className="text-green-600"/>
           </div>
-          <p className="text-3xl font-bold text-green-600">
-            ${totalIngresos.toLocaleString()}
-          </p>
+
+          <h3 className="text-3xl font-bold text-green-600 mt-3">
+            $
+            {balance?.totalIngresos.toLocaleString() ?? 0}
+          </h3>
+
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-500">Total gastos</p>
-            <TrendingDown className="w-5 h-5 text-red-500" />
+        <div className="bg-white rounded-lg shadow p-5">
+
+          <div className="flex justify-between">
+            <p className="text-gray-500">Gastos</p>
+            <TrendingDown className="text-red-600"/>
           </div>
-          <p className="text-3xl font-bold text-red-600">
-            ${totalGastos.toLocaleString()}
-          </p>
+
+          <h3 className="text-3xl font-bold text-red-600 mt-3">
+            $
+            {balance?.totalGastos.toLocaleString() ?? 0}
+          </h3>
+
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-500">Categorías</p>
-            <Tag className="w-5 h-5 text-purple-500" />
+        <div className="bg-white rounded-lg shadow p-5">
+
+          <div className="flex justify-between">
+            <p className="text-gray-500">Saldo Actual</p>
+            <Wallet className="text-purple-600"/>
           </div>
-          <p className="text-3xl font-bold text-purple-600">{cats}</p>
+
+          <h3 className="text-3xl font-bold text-purple-600 mt-3">
+            $
+            {balance?.saldoActual.toLocaleString() ?? 0}
+          </h3>
+
         </div>
+
       </div>
+
+      {alerta && (
+
+        <div
+          className={`rounded-lg p-5 border ${
+            alerta.alertaActiva
+              ? "bg-red-50 border-red-300"
+              : "bg-green-50 border-green-300"
+          }`}
+        >
+
+          <div className="flex items-center gap-3">
+
+            <AlertTriangle
+              className={
+                alerta.alertaActiva
+                  ? "text-red-600"
+                  : "text-green-600"
+              }
+            />
+
+            <div>
+
+              <h3 className="font-bold">
+                Estado Presupuestal
+              </h3>
+
+              <p>
+                {alerta.mensaje}
+              </p>
+
+              <p className="text-sm text-gray-600 mt-1">
+
+                Gastado:
+                {" "}
+                {alerta.porcentajeGastado.toFixed(2)}
+                %
+
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Acciones rápidas</h3>
-        <div className="flex flex-wrap gap-3">
-          <Link to="/income" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" /> Registrar ingreso
-          </Link>
-          <Link to="/expenses" className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2">
-            <TrendingDown className="w-4 h-4" /> Registrar gasto
-          </Link>
-          <Link to="/categories" className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2">
-            <Tag className="w-4 h-4" /> Gestionar categorías
-          </Link>
-          <Link to="/budgets" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg inline-flex items-center gap-2">
-            <Wallet className="w-4 h-4" /> Presupuesto
-          </Link>
+
+        <div className="flex items-center gap-3 mb-4">
+
+          <Lightbulb className="text-yellow-500"/>
+
+          <h3 className="text-xl font-semibold">
+            Recomendaciones Financieras
+          </h3>
+
         </div>
+
+        {recomendaciones?.recomendaciones.length ? (
+
+          <ul className="space-y-3">
+
+            {recomendaciones.recomendaciones.map(
+              (r,index) => (
+
+                <li
+                  key={index}
+                  className="bg-gray-50 p-4 rounded-lg"
+                >
+                  {r}
+                </li>
+
+              )
+            )}
+
+          </ul>
+
+        ) : (
+
+          <p>
+            No hay recomendaciones disponibles.
+          </p>
+
+        )}
+
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="p-4 border-b">
-          <h3 className="text-lg font-semibold">Últimos movimientos</h3>
-        </div>
-        {ultimos.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">Sin movimientos aún</p>
-        ) : (
-          <ul className="divide-y">
-            {ultimos.map((m) => (
-              <li key={m.id} className="p-4 flex justify-between">
-                <div>
-                  <p className="font-medium">
-                    {m.tipo === "INGRESO" ? "🟢" : "🔴"} {m.descripcion || m.categoriaNombre || "Movimiento"}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {m.categoriaNombre} · {new Date(m.fecha).toLocaleString("es-ES")}
-                  </p>
-                </div>
-                <p className={`font-semibold ${m.tipo === "INGRESO" ? "text-green-600" : "text-red-600"}`}>
-                  {m.tipo === "INGRESO" ? "+" : "-"}${m.valor.toLocaleString()}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </div>
   );
 }

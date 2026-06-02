@@ -117,7 +117,7 @@ export function Dashboard() {
 
           <h3 className="text-3xl font-bold text-blue-600 mt-3">
             $
-            {{presupuesto?.total.toLocaleString() ?? 0}}
+            {presupuesto?.total.toLocaleString() ?? 0}
           </h3>
 
         </div>

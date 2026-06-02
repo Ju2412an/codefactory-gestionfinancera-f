@@ -409,33 +409,21 @@ export async function listarMovimientos() {
 // SPRINT 3
 // =========================
 
-export async function
-obtenerBalanceMensual() {
-
+export async function obtenerBalanceMensual(): Promise<BalanceMensual> {
   return rawRequest<BalanceMensual>(
-    withUsuarioId(
-      "/gastos/balance-mensual"
-    )
+    withUsuarioId("/gastos/balance-mensual")
   );
 }
 
-export async function
-obtenerAlertaPresupuesto() {
-
+export async function obtenerAlertaPresupuesto(): Promise<AlertaPresupuesto> {
   return rawRequest<AlertaPresupuesto>(
-    withUsuarioId(
-      "/gastos/alerta-presupuesto"
-    )
+    withUsuarioId("/gastos/alerta-presupuesto")
   );
 }
 
-export async function
-obtenerRecomendaciones() {
-
+export async function obtenerRecomendaciones(): Promise<Recomendacion> {
   return rawRequest<Recomendacion>(
-    withUsuarioId(
-      "/gastos/recomendaciones"
-    )
+    withUsuarioId("/gastos/recomendaciones")
   );
 }
 

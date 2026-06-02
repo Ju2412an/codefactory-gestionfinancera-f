@@ -127,6 +127,7 @@ export interface Categoria {
 
 export interface Presupuesto {
   id?: number;
+  presupuestoInicial: number;
   total: number;
 }
 
